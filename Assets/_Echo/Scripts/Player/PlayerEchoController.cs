@@ -5,6 +5,7 @@ public class PlayerEchoController : MonoBehaviour
     [Header("Echo Settings")]
     public GameObject echoRingPrefab;
     public float echoCooldown = 1.2f;
+    public float echoRadius = 3.5f;
 
     private float lastEchoTime;
 
@@ -31,5 +32,28 @@ public class PlayerEchoController : MonoBehaviour
         {
             Debug.LogWarning("Echo Ring Prefab is missing on PlayerEchoController.");
         }
+
+        RevealNearbyHiddenObjects();
+    }
+
+    private void RevealNearbyHiddenObjects()
+    {
+        Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, echoRadius);
+
+        foreach (Collider2D hit in hits)
+        {
+            HiddenEchoObject hiddenObject = hit.GetComponentInParent<HiddenEchoObject>();
+
+            if (hiddenObject != null)
+            {
+                hiddenObject.RevealTemporarily();
+            }
+        }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, echoRadius);
     }
 }
