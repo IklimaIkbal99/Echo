@@ -6,11 +6,13 @@ public class HiddenEchoObject : MonoBehaviour
     [Header("Visibility Settings")]
     public float hiddenAlpha = 0f;
     public float revealedAlpha = 0.75f;
+    public float revivedAlpha = 1f;
     public float revealDuration = 2.5f;
     public float fadeSpeed = 8f;
 
     private SpriteRenderer[] spriteRenderers;
     private Coroutine revealRoutine;
+    private bool isRevived;
 
     private void Awake()
     {
@@ -20,6 +22,9 @@ public class HiddenEchoObject : MonoBehaviour
 
     public void RevealTemporarily()
     {
+        if (isRevived)
+            return;
+
         if (revealRoutine != null)
         {
             StopCoroutine(revealRoutine);
@@ -28,13 +33,29 @@ public class HiddenEchoObject : MonoBehaviour
         revealRoutine = StartCoroutine(RevealRoutine());
     }
 
+    public void RevivePermanently()
+    {
+        isRevived = true;
+
+        if (revealRoutine != null)
+        {
+            StopCoroutine(revealRoutine);
+            revealRoutine = null;
+        }
+
+        StartCoroutine(FadeTo(revivedAlpha));
+    }
+
     private IEnumerator RevealRoutine()
     {
         yield return FadeTo(revealedAlpha);
 
         yield return new WaitForSeconds(revealDuration);
 
-        yield return FadeTo(hiddenAlpha);
+        if (!isRevived)
+        {
+            yield return FadeTo(hiddenAlpha);
+        }
 
         revealRoutine = null;
     }

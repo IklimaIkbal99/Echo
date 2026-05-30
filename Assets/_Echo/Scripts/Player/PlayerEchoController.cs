@@ -2,6 +2,10 @@ using UnityEngine;
 
 public class PlayerEchoController : MonoBehaviour
 {
+    [Header("Player Echo Settings")]
+    public int playerIndex = 1;
+    public KeyCode echoKey = KeyCode.E;
+
     [Header("Echo Settings")]
     public GameObject echoRingPrefab;
     public float echoCooldown = 1.2f;
@@ -11,7 +15,7 @@ public class PlayerEchoController : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.E))
+        if (Input.GetKeyDown(echoKey))
         {
             TryEcho();
         }
@@ -34,6 +38,11 @@ public class PlayerEchoController : MonoBehaviour
         }
 
         RevealNearbyHiddenObjects();
+
+        if (CoOpEchoManager.Instance != null)
+        {
+            CoOpEchoManager.Instance.RegisterEcho(this, transform.position);
+        }
     }
 
     private void RevealNearbyHiddenObjects()
