@@ -252,12 +252,16 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1036548549}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 0ee0afebb7693004dbb1abbf1913d404, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 4
+  moveUpKey: 273
+  moveDownKey: 274
+  moveLeftKey: 276
+  moveRightKey: 275
 --- !u!58 &1036548552
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -301,7 +305,7 @@ Rigidbody2D:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1036548549}
-  m_BodyType: 0
+  m_BodyType: 1
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
@@ -421,6 +425,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   moveSpeed: 4
+  moveUpKey: 119
+  moveDownKey: 115
+  moveLeftKey: 97
+  moveRightKey: 100
 --- !u!58 &1694870474
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -464,7 +472,7 @@ Rigidbody2D:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1694870472}
-  m_BodyType: 0
+  m_BodyType: 1
   m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
@@ -888,7 +896,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   coOpTimeWindow: 0.6
-  playerProximityDistance: 2.2
+  playerProximityDistance: 4
   reviveRadius: 3.5
 --- !u!4 &1857659265
 Transform:
