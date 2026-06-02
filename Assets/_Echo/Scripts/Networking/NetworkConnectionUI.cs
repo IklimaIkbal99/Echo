@@ -14,7 +14,7 @@ public class NetworkConnectionUI : MonoBehaviour
         if (NetworkManager.Singleton == null)
             return;
 
-        GUILayout.BeginArea(new Rect(10, 10, 320, 230), "Network", GUI.skin.window);
+        GUILayout.BeginArea(new Rect(10, 10, 360, 260), "Network", GUI.skin.window);
 
         GUILayout.Label("Status: " + statusMessage);
 
@@ -22,6 +22,8 @@ public class NetworkConnectionUI : MonoBehaviour
         {
             GUILayout.Label("Mode: Host / Server");
             GUILayout.Label("Connected Clients: " + NetworkManager.Singleton.ConnectedClientsIds.Count);
+            GUILayout.Label("Host listens on: 0.0.0.0");
+            GUILayout.Label("Port: " + port);
         }
         else if (NetworkManager.Singleton.IsClient)
         {
@@ -30,12 +32,12 @@ public class NetworkConnectionUI : MonoBehaviour
             if (NetworkManager.Singleton.IsConnectedClient)
                 GUILayout.Label("Client Connection: Connected");
             else
-                GUILayout.Label("Client Connection: Connecting / Not fully connected");
+                GUILayout.Label("Client Connection: Waiting / Failed");
         }
 
         if (!NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)
         {
-            GUILayout.Label("Host IP Address:");
+            GUILayout.Label("Client should write HOST IPv4 here:");
             hostAddress = GUILayout.TextField(hostAddress);
 
             if (GUILayout.Button("Start Host"))
@@ -66,15 +68,16 @@ public class NetworkConnectionUI : MonoBehaviour
 
         if (transport != null)
         {
-            transport.SetConnectionData("127.0.0.1", port, "0.0.0.0");
+            // Host dışarıdan bağlantı alabilsin diye 0.0.0.0 üzerinden dinliyor.
+            transport.SetConnectionData("0.0.0.0", port, "0.0.0.0");
         }
 
         bool started = NetworkManager.Singleton.StartHost();
 
         if (started)
         {
-            statusMessage = "Host started";
-            Debug.Log("Host started.");
+            statusMessage = "Host started. Waiting for clients...";
+            Debug.Log("Host started on port " + port + ". Listening on 0.0.0.0");
         }
         else
         {
@@ -89,6 +92,7 @@ public class NetworkConnectionUI : MonoBehaviour
 
         if (transport != null)
         {
+            // Client burada host bilgisayarın IPv4 adresine bağlanır.
             transport.SetConnectionData(hostAddress, port);
         }
 
@@ -97,7 +101,7 @@ public class NetworkConnectionUI : MonoBehaviour
         if (started)
         {
             statusMessage = "Client started. Waiting for connection...";
-            Debug.Log("Client started. Waiting for connection...");
+            Debug.Log("Client trying to connect to " + hostAddress + ":" + port);
         }
         else
         {
