@@ -47,6 +47,9 @@ TagManager:
   - name: Ground
     uniqueID: 658707345
     locked: 0
+  - name: Water
+    uniqueID: 3545235445
+    locked: 0
   - name: Path
     uniqueID: 3965607779
     locked: 0
