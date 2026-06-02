@@ -7,12 +7,31 @@ public class NetworkConnectionUI : MonoBehaviour
     private string hostAddress = "127.0.0.1";
     private ushort port = 7777;
 
+    private string statusMessage = "Not connected";
+
     private void OnGUI()
     {
         if (NetworkManager.Singleton == null)
             return;
 
-        GUILayout.BeginArea(new Rect(10, 10, 280, 190), "Network", GUI.skin.window);
+        GUILayout.BeginArea(new Rect(10, 10, 320, 230), "Network", GUI.skin.window);
+
+        GUILayout.Label("Status: " + statusMessage);
+
+        if (NetworkManager.Singleton.IsServer)
+        {
+            GUILayout.Label("Mode: Host / Server");
+            GUILayout.Label("Connected Clients: " + NetworkManager.Singleton.ConnectedClientsIds.Count);
+        }
+        else if (NetworkManager.Singleton.IsClient)
+        {
+            GUILayout.Label("Mode: Client");
+
+            if (NetworkManager.Singleton.IsConnectedClient)
+                GUILayout.Label("Client Connection: Connected");
+            else
+                GUILayout.Label("Client Connection: Connecting / Not fully connected");
+        }
 
         if (!NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)
         {
@@ -31,12 +50,10 @@ public class NetworkConnectionUI : MonoBehaviour
         }
         else
         {
-            string mode = NetworkManager.Singleton.IsHost ? "Host" : "Client";
-            GUILayout.Label("Connected as: " + mode);
-
             if (GUILayout.Button("Shutdown"))
             {
                 NetworkManager.Singleton.Shutdown();
+                statusMessage = "Shutdown";
             }
         }
 
@@ -52,7 +69,18 @@ public class NetworkConnectionUI : MonoBehaviour
             transport.SetConnectionData("127.0.0.1", port, "0.0.0.0");
         }
 
-        NetworkManager.Singleton.StartHost();
+        bool started = NetworkManager.Singleton.StartHost();
+
+        if (started)
+        {
+            statusMessage = "Host started";
+            Debug.Log("Host started.");
+        }
+        else
+        {
+            statusMessage = "Host failed to start";
+            Debug.LogWarning("Host failed to start.");
+        }
     }
 
     private void StartClient()
@@ -64,6 +92,17 @@ public class NetworkConnectionUI : MonoBehaviour
             transport.SetConnectionData(hostAddress, port);
         }
 
-        NetworkManager.Singleton.StartClient();
+        bool started = NetworkManager.Singleton.StartClient();
+
+        if (started)
+        {
+            statusMessage = "Client started. Waiting for connection...";
+            Debug.Log("Client started. Waiting for connection...");
+        }
+        else
+        {
+            statusMessage = "Client failed to start";
+            Debug.LogWarning("Client failed to start.");
+        }
     }
 }
