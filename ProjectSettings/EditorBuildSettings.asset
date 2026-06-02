@@ -21,6 +21,9 @@ EditorBuildSettings:
     path: Assets/_Echo/Scenes/03_Forest_Prototype.unity
     guid: 4c950eb49237c434b8d454ebb1ab0abe
   - enabled: 1
+    path: Assets/_Echo/Scenes/04_Forest_Demo.unity
+    guid: b35d6c88ea10af54a8775f3a1ad95bb7
+  - enabled: 1
     path: Assets/_Echo/Scenes/99_Art_VFX_Test.unity
     guid: a54663afa43f8644bb7de13dfc94c2db
   m_configObjects: {}

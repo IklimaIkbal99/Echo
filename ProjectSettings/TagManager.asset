@@ -41,3 +41,27 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: Background
+    uniqueID: 607011039
+    locked: 0
+  - name: Ground
+    uniqueID: 658707345
+    locked: 0
+  - name: Path
+    uniqueID: 3965607779
+    locked: 0
+  - name: Props
+    uniqueID: 2022130781
+    locked: 0
+  - name: Player
+    uniqueID: 477618611
+    locked: 0
+  - name: Foreground
+    uniqueID: 2400622173
+    locked: 0
+  - name: VFX
+    uniqueID: 915568333
+    locked: 0
+  - name: UI
+    uniqueID: 2111723401
+    locked: 0
