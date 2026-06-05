@@ -78,8 +78,8 @@ SpriteRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
+  m_SortingLayerID: 477618611
+  m_SortingLayer: 6
   m_SortingOrder: 10
   m_Sprite: {fileID: -2413806693520163455, guid: a86470a33a6bf42c4b3595704624658b, type: 3}
   m_Color: {r: 0.7584905, g: 0.6566021, b: 0.21037377, a: 1}
@@ -233,6 +233,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   echoRingPrefab: {fileID: 7683648418630843310, guid: c7d67a748027c3041a8beb0b428e31a7, type: 3}
   echoCooldown: 1.2
+  echoRadius: 3.5
+  coOpTimeWindow: 1
+  playerProximityDistance: 3.5
+  reviveRadius: 4
 --- !u!114 &-4973951912696329650
 MonoBehaviour:
   m_ObjectHideFlags: 0
