@@ -23,21 +23,49 @@ public class NetworkPlayer3DMovement : NetworkBehaviour
         if (!IsOwner)
             return;
 
-        SubmitMovementServerRpc(movementInput);
+        Vector3 moveDirection = GetCameraRelativeMoveDirection(movementInput);
+
+        SubmitMovementServerRpc(moveDirection);
+    }
+
+    private Vector3 GetCameraRelativeMoveDirection(Vector2 input)
+    {
+        Camera mainCamera = Camera.main;
+
+        if (mainCamera == null)
+        {
+            return new Vector3(input.x, 0f, input.y);
+        }
+
+        Vector3 cameraForward = mainCamera.transform.forward;
+        Vector3 cameraRight = mainCamera.transform.right;
+
+        cameraForward.y = 0f;
+        cameraRight.y = 0f;
+
+        cameraForward.Normalize();
+        cameraRight.Normalize();
+
+        Vector3 moveDirection =
+            cameraForward * input.y +
+            cameraRight * input.x;
+
+        if (moveDirection.sqrMagnitude > 1f)
+        {
+            moveDirection.Normalize();
+        }
+
+        return moveDirection;
     }
 
     [ServerRpc]
-    private void SubmitMovementServerRpc(Vector2 input)
+    private void SubmitMovementServerRpc(Vector3 moveDirection)
     {
-        if (input == Vector2.zero)
+        if (moveDirection.sqrMagnitude <= 0.0001f)
             return;
 
-        Vector3 movement = new Vector3(input.x, 0f, input.y) * moveSpeed * Time.fixedDeltaTime;
-        transform.position += movement;
+        transform.position += moveDirection * moveSpeed * Time.fixedDeltaTime;
 
-        if (movement.sqrMagnitude > 0.001f)
-        {
-            transform.forward = movement.normalized;
-        }
+        transform.forward = moveDirection;
     }
 }
