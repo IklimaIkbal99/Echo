@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-7994729634412959459
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  version: 7
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: MAT_Water_Stylized
+  m_Shader: {fileID: -6465566751694194690, guid: 0ba09e3043034d64eba4c886a0dc5959, type: 3}
+  m_Parent: {fileID: 2100000, guid: 2e7fa2e78657b1e429472827526c75ea, type: 2}
+  m_ModifiedSerializedProperties: 12
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _ALPHAPREMULTIPLY_ON
+  - _EMISSION
+  - _SURFACE_TYPE_TRANSPARENT
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 1
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _AlphaClip: 1
+    - _Caustic_Strength: 2
+    - _Cutoff: 0.55
+    - _Displacement_Amount: 0.1
+    - _Displacement_Scale: 3
+    - _Displacement_Speed: 1
+    - _MaxWaveDist: 100
+    - _SrcBlend: 1
+    - _Tiling: 0.1
+    - _Transparency: 0.979
+    - _UseFoam: 1
+    - _WaveDist: 50
+    - _WaveFrequency: 2
+    - _WaveSpeed: 0.01
+    - _ZWrite: 0
+    m_Colors:
+    - _Color: {r: 0.41320753, g: 0.8546002, b: 1, a: 1}
+    - _EdgeColor: {r: 0.010815193, g: 0.81886786, b: 0.66869885, a: 1}
+    - _FoamColor: {r: 4.6148367, g: 4.6148367, b: 4.6148367, a: 1}
+  m_BuildTextureStacks: []
