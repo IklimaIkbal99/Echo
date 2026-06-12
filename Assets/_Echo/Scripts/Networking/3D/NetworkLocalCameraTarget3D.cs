@@ -1,3 +1,4 @@
+using System.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -8,22 +9,30 @@ public class NetworkLocalCameraTarget3D : NetworkBehaviour
         if (!IsOwner)
             return;
 
-        Camera mainCamera = Camera.main;
+        StartCoroutine(AssignCameraTargetRoutine());
+    }
 
-        if (mainCamera == null)
-        {
-            Debug.LogWarning("Main Camera not found.");
-            return;
-        }
+    private IEnumerator AssignCameraTargetRoutine()
+    {
+        yield return null;
 
-        CameraFollow3D cameraFollow = mainCamera.GetComponent<CameraFollow3D>();
+        CameraFollow3D cameraFollow = FindObjectOfType<CameraFollow3D>();
 
         if (cameraFollow == null)
         {
-            Debug.LogWarning("CameraFollow3D component not found on Main Camera.");
-            return;
+            Debug.LogWarning("CameraFollow3D not found in scene.");
+            yield break;
         }
 
-        cameraFollow.target = transform;
+        Transform cameraTarget = transform.Find("CameraTarget");
+
+        if (cameraTarget == null)
+        {
+            cameraTarget = transform;
+        }
+
+        cameraFollow.SetTarget(cameraTarget, true);
+
+        Debug.Log("Camera assigned to: " + cameraTarget.name);
     }
 }

@@ -1,12 +1,23 @@
 using Unity.Netcode;
 using UnityEngine;
 
+[RequireComponent(typeof(CharacterController))]
 public class NetworkPlayer3DMovement : NetworkBehaviour
 {
-    [Header("Movement Settings")]
+    [Header("Movement")]
     public float moveSpeed = 5f;
+    public float rotationSpeed = 12f;
+    public float gravity = -25f;
+    public float groundedStickForce = -4f;
 
+    private CharacterController characterController;
     private Vector2 movementInput;
+    private float verticalVelocity;
+
+    private void Awake()
+    {
+        characterController = GetComponent<CharacterController>();
+    }
 
     private void Update()
     {
@@ -24,7 +35,6 @@ public class NetworkPlayer3DMovement : NetworkBehaviour
             return;
 
         Vector3 moveDirection = GetCameraRelativeMoveDirection(movementInput);
-
         SubmitMovementServerRpc(moveDirection);
     }
 
@@ -33,9 +43,7 @@ public class NetworkPlayer3DMovement : NetworkBehaviour
         Camera mainCamera = Camera.main;
 
         if (mainCamera == null)
-        {
             return new Vector3(input.x, 0f, input.y);
-        }
 
         Vector3 cameraForward = mainCamera.transform.forward;
         Vector3 cameraRight = mainCamera.transform.right;
@@ -46,14 +54,10 @@ public class NetworkPlayer3DMovement : NetworkBehaviour
         cameraForward.Normalize();
         cameraRight.Normalize();
 
-        Vector3 moveDirection =
-            cameraForward * input.y +
-            cameraRight * input.x;
+        Vector3 moveDirection = cameraForward * input.y + cameraRight * input.x;
 
         if (moveDirection.sqrMagnitude > 1f)
-        {
             moveDirection.Normalize();
-        }
 
         return moveDirection;
     }
@@ -61,11 +65,36 @@ public class NetworkPlayer3DMovement : NetworkBehaviour
     [ServerRpc]
     private void SubmitMovementServerRpc(Vector3 moveDirection)
     {
-        if (moveDirection.sqrMagnitude <= 0.0001f)
-            return;
+        if (characterController == null)
+            characterController = GetComponent<CharacterController>();
 
-        transform.position += moveDirection * moveSpeed * Time.fixedDeltaTime;
+        if (characterController.isGrounded)
+        {
+            if (verticalVelocity < 0f)
+                verticalVelocity = groundedStickForce;
+        }
+        else
+        {
+            verticalVelocity += gravity * Time.fixedDeltaTime;
+        }
 
-        transform.forward = moveDirection;
+        Vector3 horizontalMovement = moveDirection * moveSpeed;
+        Vector3 verticalMovement = Vector3.up * verticalVelocity;
+
+        Vector3 finalMovement =
+            (horizontalMovement + verticalMovement) * Time.fixedDeltaTime;
+
+        characterController.Move(finalMovement);
+
+        if (moveDirection.sqrMagnitude > 0.001f)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(moveDirection, Vector3.up);
+
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                targetRotation,
+                rotationSpeed * Time.fixedDeltaTime
+            );
+        }
     }
 }

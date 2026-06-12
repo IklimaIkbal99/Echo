@@ -8,6 +8,7 @@ public class NetworkPlayerEchoController3D : NetworkBehaviour
 
     [Header("Echo VFX")]
     public GameObject echoRingPrefab;
+    public float echoRingHeightOffset = 0.12f;
 
     [Header("Hidden Object Detection")]
     public float revealRadius = 8f;
@@ -87,13 +88,49 @@ public class NetworkPlayerEchoController3D : NetworkBehaviour
             return;
         }
 
+        float groundY = GetGroundHeight(echoPosition);
+
         Vector3 ringPosition = new Vector3(
             echoPosition.x,
-            0.05f,
+            groundY + echoRingHeightOffset,
             echoPosition.z
         );
 
         Instantiate(echoRingPrefab, ringPosition, Quaternion.identity);
+    }
+
+    private float GetGroundHeight(Vector3 position)
+    {
+        Terrain activeTerrain = Terrain.activeTerrain;
+
+        if (activeTerrain != null)
+        {
+            Vector3 terrainPosition = activeTerrain.transform.position;
+            TerrainData terrainData = activeTerrain.terrainData;
+
+            bool insideTerrain =
+                position.x >= terrainPosition.x &&
+                position.x <= terrainPosition.x + terrainData.size.x &&
+                position.z >= terrainPosition.z &&
+                position.z <= terrainPosition.z + terrainData.size.z;
+
+            if (insideTerrain)
+            {
+                return activeTerrain.SampleHeight(position) + terrainPosition.y;
+            }
+        }
+
+        Ray ray = new Ray(
+            new Vector3(position.x, position.y + 20f, position.z),
+            Vector3.down
+        );
+
+        if (Physics.Raycast(ray, out RaycastHit hit, 50f))
+        {
+            return hit.point.y;
+        }
+
+        return position.y;
     }
 
     private void RevealHiddenObjectsNear(Vector3 centerPosition, bool permanent)
