@@ -22,7 +22,8 @@ public class AnimalWander3D : NetworkBehaviour
     public float groundOffset = 0.03f;
 
     [Header("Animation")]
-    public float animationSmoothing = 8f;
+    public float animationSmoothing = 10f;
+    public float movingAnimationThreshold = 0.01f;
 
     private NetworkVariable<bool> isMoving = new NetworkVariable<bool>(
         false,
@@ -33,6 +34,8 @@ public class AnimalWander3D : NetworkBehaviour
     private bool isWandering;
     private Vector3 currentTarget;
     private float pauseTimer;
+
+    private Vector3 lastWorldPosition;
     private float currentAnimationSpeed;
 
     private void Awake()
@@ -41,12 +44,15 @@ public class AnimalWander3D : NetworkBehaviour
         {
             animalAnimator = GetComponentInChildren<Animator>();
         }
+
+        lastWorldPosition = transform.position;
     }
 
     public override void OnNetworkSpawn()
     {
         isMoving.OnValueChanged += OnMovingStateChanged;
 
+        lastWorldPosition = transform.position;
         SetAnimatorSpeedImmediate(0f);
     }
 
@@ -62,7 +68,7 @@ public class AnimalWander3D : NetworkBehaviour
             ServerUpdateWander();
         }
 
-        UpdateAnimator();
+        UpdateAnimatorFromActualMovement();
     }
 
     public void StartWandering()
@@ -105,6 +111,7 @@ public class AnimalWander3D : NetworkBehaviour
             if (pauseTimer <= 0f)
             {
                 PickNewTarget();
+                isMoving.Value = true;
             }
 
             return;
@@ -186,12 +193,21 @@ public class AnimalWander3D : NetworkBehaviour
         currentTarget = newTarget;
     }
 
-    private void UpdateAnimator()
+    private void UpdateAnimatorFromActualMovement()
     {
         if (animalAnimator == null)
             return;
 
-        float targetSpeed = isMoving.Value ? 1f : 0f;
+        Vector3 currentPosition = transform.position;
+
+        Vector3 horizontalDelta = currentPosition - lastWorldPosition;
+        horizontalDelta.y = 0f;
+
+        float actualMovementAmount = horizontalDelta.magnitude;
+
+        bool actuallyMoving = actualMovementAmount > movingAnimationThreshold;
+
+        float targetSpeed = actuallyMoving || isMoving.Value ? 1f : 0f;
 
         currentAnimationSpeed = Mathf.Lerp(
             currentAnimationSpeed,
@@ -200,6 +216,8 @@ public class AnimalWander3D : NetworkBehaviour
         );
 
         animalAnimator.SetFloat(speedParameterName, currentAnimationSpeed);
+
+        lastWorldPosition = currentPosition;
     }
 
     private void SetAnimatorSpeedImmediate(float value)
@@ -214,6 +232,6 @@ public class AnimalWander3D : NetworkBehaviour
 
     private void OnMovingStateChanged(bool previousValue, bool newValue)
     {
-        // Animator is updated every frame through UpdateAnimator.
+        // Animation is updated every frame from actual movement.
     }
 }
