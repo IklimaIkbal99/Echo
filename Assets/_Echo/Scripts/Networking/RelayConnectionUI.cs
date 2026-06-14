@@ -1,4 +1,5 @@
 using System;
+using TMPro;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using Unity.Networking.Transport.Relay;
@@ -7,6 +8,7 @@ using Unity.Services.Core;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class RelayConnectionUI : MonoBehaviour
 {
@@ -14,91 +16,90 @@ public class RelayConnectionUI : MonoBehaviour
     [SerializeField] private int maxConnections = 4;
     [SerializeField] private string connectionType = "dtls";
 
-    private string joinCodeInput = "";
+    [Header("Panels")]
+    [SerializeField] private GameObject mainMenuPanel;
+    [SerializeField] private GameObject playMenuPanel;
+
+    [Header("Game UI")]
+    [SerializeField] private GameObject gameHudCanvas;
+
+    [Header("Join Room UI")]
+    [SerializeField] private TMP_InputField joinCodeInputField;
+
+    [Header("Texts")]
+    [SerializeField] private TMP_Text statusText;
+    [SerializeField] private TMP_Text roomCodeText;
+
+    [Header("Buttons")]
+    [SerializeField] private Button createRoomButton;
+    [SerializeField] private Button joinRoomButton;
+
     private string currentJoinCode = "";
-    private string statusMessage = "Not connected";
     private bool isBusy;
 
-    private void OnGUI()
+    private void Start()
     {
-        if (NetworkManager.Singleton == null)
-            return;
-
-        GUILayout.BeginArea(new Rect(10, 10, 380, 300), "ECHO Relay Network", GUI.skin.window);
-
-        GUILayout.Label("Status: " + statusMessage);
-
-        if (!string.IsNullOrEmpty(currentJoinCode))
-        {
-            GUILayout.Space(8);
-            GUILayout.Label("Join Code:");
-            GUILayout.TextField(currentJoinCode);
-        }
-
-        GUILayout.Space(8);
-
-        if (!NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)
-        {
-            GUI.enabled = !isBusy;
-
-            if (GUILayout.Button("Start Host with Relay"))
-            {
-                StartRelayHost();
-            }
-
-            GUILayout.Space(10);
-
-            GUILayout.Label("Enter Join Code:");
-            joinCodeInput = GUILayout.TextField(joinCodeInput);
-
-            if (GUILayout.Button("Start Client with Relay"))
-            {
-                StartRelayClient();
-            }
-
-            GUI.enabled = true;
-        }
-        else
-        {
-            if (NetworkManager.Singleton.IsHost)
-            {
-                GUILayout.Label("Mode: Host");
-                GUILayout.Label("Connected Clients: " + NetworkManager.Singleton.ConnectedClientsIds.Count);
-            }
-            else if (NetworkManager.Singleton.IsClient)
-            {
-                GUILayout.Label("Mode: Client");
-
-                if (NetworkManager.Singleton.IsConnectedClient)
-                    GUILayout.Label("Client Connection: Connected");
-                else
-                    GUILayout.Label("Client Connection: Connecting...");
-            }
-
-            if (GUILayout.Button("Shutdown"))
-            {
-                NetworkManager.Singleton.Shutdown();
-                statusMessage = "Shutdown";
-                currentJoinCode = "";
-            }
-        }
-
-        GUILayout.EndArea();
+        ShowMainMenu();
+        SetStatus("");
+        SetRoomCode("");
     }
 
-    private async void StartRelayHost()
+    public void ShowMainMenu()
+    {
+        if (mainMenuPanel != null)
+            mainMenuPanel.SetActive(true);
+
+        if (playMenuPanel != null)
+            playMenuPanel.SetActive(false);
+
+        if (gameHudCanvas != null)
+            gameHudCanvas.SetActive(false);
+    }
+
+    public void ShowPlayMenu()
+{
+    Debug.Log("ShowPlayMenu called.");
+
+    if (mainMenuPanel != null)
+        mainMenuPanel.SetActive(false);
+
+    if (playMenuPanel != null)
+        playMenuPanel.SetActive(true);
+
+    if (gameHudCanvas != null)
+        gameHudCanvas.SetActive(false);
+}
+
+    public void ShowGameHUD()
+    {
+        if (mainMenuPanel != null)
+            mainMenuPanel.SetActive(false);
+
+        if (playMenuPanel != null)
+            playMenuPanel.SetActive(false);
+
+        if (gameHudCanvas != null)
+            gameHudCanvas.SetActive(true);
+    }
+
+    public async void CreateRoom()
     {
         if (isBusy)
             return;
 
+        if (NetworkManager.Singleton == null)
+        {
+            SetStatus("NetworkManager not found.");
+            return;
+        }
+
         isBusy = true;
-        statusMessage = "Initializing Unity Services...";
+        SetButtonsInteractable(false);
+        SetStatus("Creating room...");
 
         try
         {
             await EnsureUnityServicesReady();
-
-            statusMessage = "Creating Relay allocation...";
 
             Allocation allocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
             currentJoinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
@@ -111,45 +112,59 @@ public class RelayConnectionUI : MonoBehaviour
 
             if (started)
             {
-                statusMessage = "Host started with Relay.";
+                SetStatus("Room created.");
+                SetRoomCode(currentJoinCode);
+                ShowGameHUD();
+
                 Debug.Log("Relay Host started. Join Code: " + currentJoinCode);
             }
             else
             {
-                statusMessage = "Failed to start Relay Host.";
+                SetStatus("Failed to create room.");
                 Debug.LogWarning("Failed to start Relay Host.");
             }
         }
         catch (Exception exception)
         {
-            statusMessage = "Relay Host failed. Check Console.";
+            SetStatus("Create room failed. Check Console.");
             Debug.LogError("Relay Host error: " + exception);
         }
 
         isBusy = false;
+        SetButtonsInteractable(true);
     }
 
-    private async void StartRelayClient()
+    public async void JoinRoom()
     {
         if (isBusy)
             return;
 
-        string cleanedJoinCode = joinCodeInput.Trim();
+        if (NetworkManager.Singleton == null)
+        {
+            SetStatus("NetworkManager not found.");
+            return;
+        }
+
+        string cleanedJoinCode = "";
+
+        if (joinCodeInputField != null)
+        {
+            cleanedJoinCode = joinCodeInputField.text.Trim().ToUpperInvariant();
+        }
 
         if (string.IsNullOrEmpty(cleanedJoinCode))
         {
-            statusMessage = "Join code is empty.";
+            SetStatus("Enter a room code.");
             return;
         }
 
         isBusy = true;
-        statusMessage = "Initializing Unity Services...";
+        SetButtonsInteractable(false);
+        SetStatus("Joining room...");
 
         try
         {
             await EnsureUnityServicesReady();
-
-            statusMessage = "Joining Relay allocation...";
 
             JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(cleanedJoinCode);
 
@@ -161,22 +176,47 @@ public class RelayConnectionUI : MonoBehaviour
 
             if (started)
             {
-                statusMessage = "Client started with Relay.";
+                currentJoinCode = cleanedJoinCode;
+
+                SetStatus("Joined room.");
+                SetRoomCode(currentJoinCode);
+                ShowGameHUD();
+
                 Debug.Log("Relay Client started with join code: " + cleanedJoinCode);
             }
             else
             {
-                statusMessage = "Failed to start Relay Client.";
+                SetStatus("Failed to join room.");
                 Debug.LogWarning("Failed to start Relay Client.");
             }
         }
         catch (Exception exception)
         {
-            statusMessage = "Relay Client failed. Check Console.";
+            SetStatus("Join room failed. Check Console.");
             Debug.LogError("Relay Client error: " + exception);
         }
 
         isBusy = false;
+        SetButtonsInteractable(true);
+    }
+
+    public void ShutdownRoom()
+    {
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.Shutdown();
+        }
+
+        currentJoinCode = "";
+        SetRoomCode("");
+        SetStatus("");
+
+        ShowMainMenu();
+    }
+
+    public void QuitGame()
+    {
+        Application.Quit();
     }
 
     private async System.Threading.Tasks.Task EnsureUnityServicesReady()
@@ -191,5 +231,35 @@ public class RelayConnectionUI : MonoBehaviour
             await AuthenticationService.Instance.SignInAnonymouslyAsync();
             Debug.Log("Signed in anonymously. Player ID: " + AuthenticationService.Instance.PlayerId);
         }
+    }
+
+    private void SetStatus(string message)
+    {
+        if (statusText != null)
+            statusText.text = message;
+    }
+
+    private void SetRoomCode(string joinCode)
+    {
+        if (roomCodeText == null)
+            return;
+
+        if (string.IsNullOrEmpty(joinCode))
+        {
+            roomCodeText.text = "";
+        }
+        else
+        {
+            roomCodeText.text = "Room Code: " + joinCode;
+        }
+    }
+
+    private void SetButtonsInteractable(bool interactable)
+    {
+        if (createRoomButton != null)
+            createRoomButton.interactable = interactable;
+
+        if (joinRoomButton != null)
+            joinRoomButton.interactable = interactable;
     }
 }
