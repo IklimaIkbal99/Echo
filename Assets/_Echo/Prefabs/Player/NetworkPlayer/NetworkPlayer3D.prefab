@@ -150,7 +150,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hostSpawnPoint: {x: -32.06, y: 5, z: 11.86}
-  clientSpawnPoint: {x: -35, y: 5, z: 14}
+  clientSpawnPoint: {x: -30, y: 5, z: 12}
   groundOffset: 0.03
   raycastStartHeight: 50
   raycastDistance: 100
@@ -172,6 +172,10 @@ MonoBehaviour:
   echoKey: 101
   echoRingPrefab: {fileID: 396375277916145171, guid: 24b41b2743a40f444a48374f0816a5df, type: 3}
   echoRingHeightOffset: 0.12
+  callSignalRingPrefab: {fileID: 396375277916145171, guid: 3371d4c4d71226f499895db6c661ddf6, type: 3}
+  callSignalHeightOffset: 0.16
+  pressesNeededForCallSignal: 3
+  triplePressTimeWindow: 0.8
   revealRadius: 8
   temporaryRevealDuration: 2
   coOpTimeWindow: 3

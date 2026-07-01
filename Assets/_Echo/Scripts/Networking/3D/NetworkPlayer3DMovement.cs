@@ -103,26 +103,33 @@ public class NetworkPlayer3DMovement : NetworkBehaviour
         }
     }
 
-    private void KeepPlayerInsidePlayArea()
+   private void KeepPlayerInsidePlayArea()
+{
+    if (!keepInsidePlayArea)
+        return;
+
+    if (EchoPlayAreaBounds3D.Instance == null)
+        return;
+
+    Vector3 currentPosition = transform.position;
+
+    Vector3 clampedPosition =
+        EchoPlayAreaBounds3D.Instance.ClampPositionToArea(currentPosition);
+
+    // Map sınırı için X ve Z clamp kalıyor.
+    // Ama Y değerini artık terrain'e zorlamıyoruz.
+    // Böylece köprü, platform, rampa gibi collider'lar çalışabilir.
+    clampedPosition.y = currentPosition.y;
+
+    bool xzChanged =
+        Mathf.Abs(currentPosition.x - clampedPosition.x) > 0.001f ||
+        Mathf.Abs(currentPosition.z - clampedPosition.z) > 0.001f;
+
+    if (xzChanged)
     {
-        if (!keepInsidePlayArea)
-            return;
-
-        if (EchoPlayAreaBounds3D.Instance == null)
-            return;
-
-        Vector3 currentPosition = transform.position;
-        Vector3 clampedPosition =
-            EchoPlayAreaBounds3D.Instance.ClampPositionToArea(currentPosition);
-
-        float groundY = EchoPlayAreaBounds3D.Instance.GetGroundY(clampedPosition);
-        clampedPosition.y = groundY;
-
-        if (Vector3.Distance(currentPosition, clampedPosition) > 0.001f)
-        {
-            characterController.enabled = false;
-            transform.position = clampedPosition;
-            characterController.enabled = true;
-        }
+        characterController.enabled = false;
+        transform.position = clampedPosition;
+        characterController.enabled = true;
     }
+  }
 }

@@ -6,9 +6,17 @@ public class NetworkPlayerEchoController3D : NetworkBehaviour
     [Header("Input")]
     public KeyCode echoKey = KeyCode.E;
 
-    [Header("Echo VFX")]
+    [Header("Regular Echo VFX")]
     public GameObject echoRingPrefab;
     public float echoRingHeightOffset = 0.12f;
+
+    [Header("Call Signal VFX")]
+    public GameObject callSignalRingPrefab;
+    public float callSignalHeightOffset = 0.16f;
+
+    [Header("Triple Press Call Signal")]
+    public int pressesNeededForCallSignal = 3;
+    public float triplePressTimeWindow = 0.8f;
 
     [Header("Hidden Object Detection")]
     public float revealRadius = 8f;
@@ -27,6 +35,9 @@ public class NetworkPlayerEchoController3D : NetworkBehaviour
     private static Vector3 lastEchoPosition;
     private static float lastEchoTime;
 
+    private int localEchoPressCount;
+    private float firstLocalEchoPressTime;
+
     private void Update()
     {
         if (!IsOwner)
@@ -34,8 +45,35 @@ public class NetworkPlayerEchoController3D : NetworkBehaviour
 
         if (Input.GetKeyDown(echoKey))
         {
-            SubmitEchoServerRpc(transform.position);
+            HandleLocalEchoInput();
         }
+    }
+
+    private void HandleLocalEchoInput()
+    {
+        float currentTime = Time.time;
+
+        bool isWithinTriplePressWindow =
+            currentTime - firstLocalEchoPressTime <= triplePressTimeWindow;
+
+        if (!isWithinTriplePressWindow)
+        {
+            firstLocalEchoPressTime = currentTime;
+            localEchoPressCount = 0;
+        }
+
+        localEchoPressCount++;
+
+        if (localEchoPressCount >= pressesNeededForCallSignal)
+        {
+            localEchoPressCount = 0;
+            firstLocalEchoPressTime = 0f;
+
+            SubmitCallSignalServerRpc(transform.position);
+            return;
+        }
+
+        SubmitEchoServerRpc(transform.position);
     }
 
     [ServerRpc]
@@ -67,11 +105,29 @@ public class NetworkPlayerEchoController3D : NetworkBehaviour
         lastEchoTime = Time.time;
     }
 
+    [ServerRpc]
+    private void SubmitCallSignalServerRpc(Vector3 signalPosition, ServerRpcParams serverRpcParams = default)
+    {
+        TriggerCallSignalClientRpc(signalPosition);
+
+        if (showDebugLogs)
+        {
+            ulong senderClientId = serverRpcParams.Receive.SenderClientId;
+            Debug.Log("Call signal sent by player: " + senderClientId);
+        }
+    }
+
     [ClientRpc]
     private void TriggerEchoClientRpc(Vector3 echoPosition)
     {
-        SpawnEchoRing(echoPosition);
+        SpawnRing(echoRingPrefab, echoPosition, echoRingHeightOffset);
         RevealHiddenObjectsNear(echoPosition, false);
+    }
+
+    [ClientRpc]
+    private void TriggerCallSignalClientRpc(Vector3 signalPosition)
+    {
+        SpawnRing(callSignalRingPrefab, signalPosition, callSignalHeightOffset);
     }
 
     [ClientRpc]
@@ -80,23 +136,23 @@ public class NetworkPlayerEchoController3D : NetworkBehaviour
         RevealHiddenObjectsNear(reviveCenter, true);
     }
 
-    private void SpawnEchoRing(Vector3 echoPosition)
+    private void SpawnRing(GameObject ringPrefab, Vector3 centerPosition, float heightOffset)
     {
-        if (echoRingPrefab == null)
+        if (ringPrefab == null)
         {
-            Debug.LogWarning("Echo ring prefab is not assigned.");
+            Debug.LogWarning("Ring prefab is not assigned.");
             return;
         }
 
-        float groundY = GetGroundHeight(echoPosition);
+        float groundY = GetGroundHeight(centerPosition);
 
         Vector3 ringPosition = new Vector3(
-            echoPosition.x,
-            groundY + echoRingHeightOffset,
-            echoPosition.z
+            centerPosition.x,
+            groundY + heightOffset,
+            centerPosition.z
         );
 
-        Instantiate(echoRingPrefab, ringPosition, Quaternion.identity);
+        Instantiate(ringPrefab, ringPosition, Quaternion.identity);
     }
 
     private float GetGroundHeight(Vector3 position)
@@ -147,6 +203,9 @@ public class NetworkPlayerEchoController3D : NetworkBehaviour
         foreach (HiddenEchoObject3D hiddenObject in hiddenObjects)
         {
             if (hiddenObject == null)
+                continue;
+
+            if (!hiddenObject.gameObject.activeInHierarchy)
                 continue;
 
             Vector3 hiddenPosition = hiddenObject.transform.position;
