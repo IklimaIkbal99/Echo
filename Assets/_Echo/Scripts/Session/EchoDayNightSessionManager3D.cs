@@ -1,73 +1,80 @@
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.Rendering;
 
 public class EchoDayNightSessionManager3D : NetworkBehaviour
 {
-    [Header("Session")]
-    public float sessionDurationSeconds = 600f;
-    public bool startSessionOnNetworkSpawn = true;
+    [Header("Cycle")]
+    public float cycleDurationSeconds = 600f;
+    public bool startCycleOnNetworkSpawn = true;
 
     [Header("Optional UI")]
-    public TMP_Text sessionPhaseText;
+    public TMP_Text cyclePhaseText;
 
     [Header("Sun")]
     public Light sunLight;
-    public Vector3 sunStartRotation = new Vector3(45f, -30f, 0f);
-    public Vector3 sunEndRotation = new Vector3(8f, -80f, 0f);
+
+    public Vector3 sunriseRotation = new Vector3(12f, -70f, 0f);
+    public Vector3 dayRotation = new Vector3(50f, -30f, 0f);
+    public Vector3 sunsetRotation = new Vector3(10f, 35f, 0f);
+    public Vector3 nightRotation = new Vector3(-25f, 100f, 0f);
 
     [Header("Sun Colors")]
+    public Color sunriseSunColor = new Color(1f, 0.62f, 0.32f);
     public Color daySunColor = new Color(1f, 0.93f, 0.72f);
-    public Color sunsetSunColor = new Color(1f, 0.55f, 0.22f);
-    public Color nightSunColor = new Color(0.25f, 0.35f, 0.65f);
+    public Color sunsetSunColor = new Color(1f, 0.48f, 0.18f);
+    public Color eveningSunColor = new Color(0.38f, 0.43f, 0.70f);
+    public Color nightSunColor = new Color(0.14f, 0.18f, 0.32f);
 
     [Header("Sun Intensity")]
+    public float sunriseSunIntensity = 0.45f;
     public float daySunIntensity = 1.25f;
     public float sunsetSunIntensity = 0.75f;
+    public float eveningSunIntensity = 0.22f;
     public float nightSunIntensity = 0.08f;
 
     [Header("Ambient Light")]
+    public Color sunriseAmbientColor = new Color(0.42f, 0.35f, 0.30f);
     public Color dayAmbientColor = new Color(0.62f, 0.58f, 0.48f);
     public Color sunsetAmbientColor = new Color(0.55f, 0.35f, 0.25f);
-    public Color nightAmbientColor = new Color(0.08f, 0.10f, 0.18f);
+    public Color eveningAmbientColor = new Color(0.18f, 0.20f, 0.30f);
+    public Color nightAmbientColor = new Color(0.09f, 0.11f, 0.18f);
 
     [Header("Fog")]
     public bool controlFog = true;
+    public Color sunriseFogColor = new Color(0.72f, 0.55f, 0.42f);
     public Color dayFogColor = new Color(0.85f, 0.78f, 0.60f);
+    public Color sunsetFogColor = new Color(0.70f, 0.38f, 0.25f);
+    public Color eveningFogColor = new Color(0.18f, 0.22f, 0.34f);
     public Color nightFogColor = new Color(0.07f, 0.09f, 0.16f);
-    public float dayFogDensity = 0.004f;
-    public float nightFogDensity = 0.025f;
 
-    [Header("Lanterns / Fireflies / Night Lights")]
+    public float dayFogDensity = 0.004f;
+    public float nightFogDensity = 0.018f;
+
+    [Header("Lanterns / Night Lights")]
     public Light[] lanternLights;
     public GameObject[] lanternVisualObjects;
-    public float lanternFadeStart = 0.60f;
-    public float lanternFullAt = 0.82f;
+
+    [Range(0f, 1f)] public float lanternFadeInStart = 0.60f;
+    [Range(0f, 1f)] public float lanternFullAt = 0.75f;
+    [Range(0f, 1f)] public float lanternFadeOutStart = 0.92f;
+
     public float fallbackLanternIntensity = 2f;
 
-    [Header("Session End")]
-    public UnityEvent onSessionEnded;
-
-    private readonly NetworkVariable<float> syncedSessionTime = new NetworkVariable<float>(
+    private readonly NetworkVariable<float> syncedCycleTime = new NetworkVariable<float>(
         0f,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
 
-    private readonly NetworkVariable<bool> sessionRunning = new NetworkVariable<bool>(
+    private readonly NetworkVariable<bool> cycleRunning = new NetworkVariable<bool>(
         false,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
 
-    private readonly NetworkVariable<bool> sessionEnded = new NetworkVariable<bool>(
-        false,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
-
+    private float localCycleTime;
     private float[] lanternBaseIntensities;
 
     private void Awake()
@@ -78,70 +85,56 @@ public class EchoDayNightSessionManager3D : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        if (IsServer && startSessionOnNetworkSpawn)
+        if (IsServer && startCycleOnNetworkSpawn)
         {
-            BeginSession();
+            BeginCycle();
         }
     }
 
     private void Update()
     {
-        if (IsSpawned && IsServer && sessionRunning.Value)
+        if (IsSpawned)
         {
-            syncedSessionTime.Value += Time.deltaTime;
-
-            if (syncedSessionTime.Value >= sessionDurationSeconds)
+            if (IsServer && cycleRunning.Value)
             {
-                syncedSessionTime.Value = sessionDurationSeconds;
-                sessionRunning.Value = false;
-                sessionEnded.Value = true;
-
-                SessionEndedClientRpc();
+                syncedCycleTime.Value += Time.deltaTime;
+                syncedCycleTime.Value = Mathf.Repeat(syncedCycleTime.Value, cycleDurationSeconds);
             }
+
+            ApplyVisuals(GetNetworkProgress());
         }
-
-        float progress = 0f;
-
-        if (sessionDurationSeconds > 0f)
+        else
         {
-            progress = Mathf.Clamp01(syncedSessionTime.Value / sessionDurationSeconds);
-        }
+            localCycleTime += Time.deltaTime;
+            localCycleTime = Mathf.Repeat(localCycleTime, cycleDurationSeconds);
 
-        ApplyVisuals(progress);
-        UpdatePhaseText(progress);
+            ApplyVisuals(GetLocalProgress());
+        }
     }
 
-    public void BeginSession()
+    public void BeginCycle()
     {
         if (!IsServer)
             return;
 
-        syncedSessionTime.Value = 0f;
-        sessionRunning.Value = true;
-        sessionEnded.Value = false;
+        syncedCycleTime.Value = 0f;
+        cycleRunning.Value = true;
     }
 
-    public void EndSessionNow()
+    private float GetNetworkProgress()
     {
-        if (!IsServer)
-            return;
+        if (cycleDurationSeconds <= 0f)
+            return 0f;
 
-        syncedSessionTime.Value = sessionDurationSeconds;
-        sessionRunning.Value = false;
-        sessionEnded.Value = true;
-
-        SessionEndedClientRpc();
+        return Mathf.Clamp01(syncedCycleTime.Value / cycleDurationSeconds);
     }
 
-    [ClientRpc]
-    private void SessionEndedClientRpc()
+    private float GetLocalProgress()
     {
-        Debug.Log("Echo session ended. Echo Memory Card can open now.");
+        if (cycleDurationSeconds <= 0f)
+            return 0f;
 
-        if (onSessionEnded != null)
-        {
-            onSessionEnded.Invoke();
-        }
+        return Mathf.Clamp01(localCycleTime / cycleDurationSeconds);
     }
 
     private void ApplyVisuals(float progress)
@@ -150,6 +143,7 @@ public class EchoDayNightSessionManager3D : NetworkBehaviour
         ApplyAmbient(progress);
         ApplyFog(progress);
         ApplyLanterns(progress);
+        UpdatePhaseText(progress);
     }
 
     private void ApplySun(float progress)
@@ -157,43 +151,156 @@ public class EchoDayNightSessionManager3D : NetworkBehaviour
         if (sunLight == null)
             return;
 
-        Vector3 sunRotation = Vector3.Lerp(
-            sunStartRotation,
-            sunEndRotation,
-            progress
-        );
+        sunLight.transform.rotation = Quaternion.Euler(EvaluateRotation(progress));
+        sunLight.color = EvaluateSunColor(progress);
+        sunLight.intensity = EvaluateSunIntensity(progress);
+    }
 
-        sunLight.transform.rotation = Quaternion.Euler(sunRotation);
-
-        if (progress < 0.65f)
+    private Vector3 EvaluateRotation(float progress)
+    {
+        if (progress < 0.18f)
         {
-            float t = Mathf.InverseLerp(0f, 0.65f, progress);
-
-            sunLight.color = Color.Lerp(daySunColor, sunsetSunColor, t);
-            sunLight.intensity = Mathf.Lerp(daySunIntensity, sunsetSunIntensity, t);
+            float t = Mathf.InverseLerp(0f, 0.18f, progress);
+            return Vector3.Lerp(sunriseRotation, dayRotation, Smooth(t));
         }
-        else
-        {
-            float t = Mathf.InverseLerp(0.65f, 1f, progress);
 
-            sunLight.color = Color.Lerp(sunsetSunColor, nightSunColor, t);
-            sunLight.intensity = Mathf.Lerp(sunsetSunIntensity, nightSunIntensity, t);
+        if (progress < 0.55f)
+        {
+            return dayRotation;
+        }
+
+        if (progress < 0.70f)
+        {
+            float t = Mathf.InverseLerp(0.55f, 0.70f, progress);
+            return Vector3.Lerp(dayRotation, sunsetRotation, Smooth(t));
+        }
+
+        if (progress < 0.86f)
+        {
+            float t = Mathf.InverseLerp(0.70f, 0.86f, progress);
+            return Vector3.Lerp(sunsetRotation, nightRotation, Smooth(t));
+        }
+
+        {
+            float t = Mathf.InverseLerp(0.86f, 1f, progress);
+            return Vector3.Lerp(nightRotation, sunriseRotation, Smooth(t));
+        }
+    }
+
+    private Color EvaluateSunColor(float progress)
+    {
+        if (progress < 0.18f)
+        {
+            float t = Mathf.InverseLerp(0f, 0.18f, progress);
+            return Color.Lerp(sunriseSunColor, daySunColor, Smooth(t));
+        }
+
+        if (progress < 0.55f)
+        {
+            return daySunColor;
+        }
+
+        if (progress < 0.68f)
+        {
+            float t = Mathf.InverseLerp(0.55f, 0.68f, progress);
+            return Color.Lerp(daySunColor, sunsetSunColor, Smooth(t));
+        }
+
+        if (progress < 0.82f)
+        {
+            float t = Mathf.InverseLerp(0.68f, 0.82f, progress);
+            return Color.Lerp(sunsetSunColor, eveningSunColor, Smooth(t));
+        }
+
+        if (progress < 0.92f)
+        {
+            float t = Mathf.InverseLerp(0.82f, 0.92f, progress);
+            return Color.Lerp(eveningSunColor, nightSunColor, Smooth(t));
+        }
+
+        {
+            float t = Mathf.InverseLerp(0.92f, 1f, progress);
+            return Color.Lerp(nightSunColor, sunriseSunColor, Smooth(t));
+        }
+    }
+
+    private float EvaluateSunIntensity(float progress)
+    {
+        if (progress < 0.18f)
+        {
+            float t = Mathf.InverseLerp(0f, 0.18f, progress);
+            return Mathf.Lerp(sunriseSunIntensity, daySunIntensity, Smooth(t));
+        }
+
+        if (progress < 0.55f)
+        {
+            return daySunIntensity;
+        }
+
+        if (progress < 0.68f)
+        {
+            float t = Mathf.InverseLerp(0.55f, 0.68f, progress);
+            return Mathf.Lerp(daySunIntensity, sunsetSunIntensity, Smooth(t));
+        }
+
+        if (progress < 0.82f)
+        {
+            float t = Mathf.InverseLerp(0.68f, 0.82f, progress);
+            return Mathf.Lerp(sunsetSunIntensity, eveningSunIntensity, Smooth(t));
+        }
+
+        if (progress < 0.92f)
+        {
+            float t = Mathf.InverseLerp(0.82f, 0.92f, progress);
+            return Mathf.Lerp(eveningSunIntensity, nightSunIntensity, Smooth(t));
+        }
+
+        {
+            float t = Mathf.InverseLerp(0.92f, 1f, progress);
+            return Mathf.Lerp(nightSunIntensity, sunriseSunIntensity, Smooth(t));
         }
     }
 
     private void ApplyAmbient(float progress)
     {
         RenderSettings.ambientMode = AmbientMode.Flat;
+        RenderSettings.ambientLight = EvaluateAmbientColor(progress);
+    }
 
-        if (progress < 0.65f)
+    private Color EvaluateAmbientColor(float progress)
+    {
+        if (progress < 0.18f)
         {
-            float t = Mathf.InverseLerp(0f, 0.65f, progress);
-            RenderSettings.ambientLight = Color.Lerp(dayAmbientColor, sunsetAmbientColor, t);
+            float t = Mathf.InverseLerp(0f, 0.18f, progress);
+            return Color.Lerp(sunriseAmbientColor, dayAmbientColor, Smooth(t));
         }
-        else
+
+        if (progress < 0.55f)
         {
-            float t = Mathf.InverseLerp(0.65f, 1f, progress);
-            RenderSettings.ambientLight = Color.Lerp(sunsetAmbientColor, nightAmbientColor, t);
+            return dayAmbientColor;
+        }
+
+        if (progress < 0.68f)
+        {
+            float t = Mathf.InverseLerp(0.55f, 0.68f, progress);
+            return Color.Lerp(dayAmbientColor, sunsetAmbientColor, Smooth(t));
+        }
+
+        if (progress < 0.82f)
+        {
+            float t = Mathf.InverseLerp(0.68f, 0.82f, progress);
+            return Color.Lerp(sunsetAmbientColor, eveningAmbientColor, Smooth(t));
+        }
+
+        if (progress < 0.92f)
+        {
+            float t = Mathf.InverseLerp(0.82f, 0.92f, progress);
+            return Color.Lerp(eveningAmbientColor, nightAmbientColor, Smooth(t));
+        }
+
+        {
+            float t = Mathf.InverseLerp(0.92f, 1f, progress);
+            return Color.Lerp(nightAmbientColor, sunriseAmbientColor, Smooth(t));
         }
     }
 
@@ -203,15 +310,52 @@ public class EchoDayNightSessionManager3D : NetworkBehaviour
             return;
 
         RenderSettings.fog = true;
-        RenderSettings.fogColor = Color.Lerp(dayFogColor, nightFogColor, progress);
-        RenderSettings.fogDensity = Mathf.Lerp(dayFogDensity, nightFogDensity, progress);
+        RenderSettings.fogColor = EvaluateFogColor(progress);
+
+        float nightAmount = EvaluateNightAmount(progress);
+        RenderSettings.fogDensity = Mathf.Lerp(dayFogDensity, nightFogDensity, nightAmount);
+    }
+
+    private Color EvaluateFogColor(float progress)
+    {
+        if (progress < 0.18f)
+        {
+            float t = Mathf.InverseLerp(0f, 0.18f, progress);
+            return Color.Lerp(sunriseFogColor, dayFogColor, Smooth(t));
+        }
+
+        if (progress < 0.55f)
+        {
+            return dayFogColor;
+        }
+
+        if (progress < 0.68f)
+        {
+            float t = Mathf.InverseLerp(0.55f, 0.68f, progress);
+            return Color.Lerp(dayFogColor, sunsetFogColor, Smooth(t));
+        }
+
+        if (progress < 0.82f)
+        {
+            float t = Mathf.InverseLerp(0.68f, 0.82f, progress);
+            return Color.Lerp(sunsetFogColor, eveningFogColor, Smooth(t));
+        }
+
+        if (progress < 0.92f)
+        {
+            float t = Mathf.InverseLerp(0.82f, 0.92f, progress);
+            return Color.Lerp(eveningFogColor, nightFogColor, Smooth(t));
+        }
+
+        {
+            float t = Mathf.InverseLerp(0.92f, 1f, progress);
+            return Color.Lerp(nightFogColor, sunriseFogColor, Smooth(t));
+        }
     }
 
     private void ApplyLanterns(float progress)
     {
-        float lanternT = Mathf.InverseLerp(lanternFadeStart, lanternFullAt, progress);
-        lanternT = Mathf.Clamp01(lanternT);
-        lanternT = Mathf.SmoothStep(0f, 1f, lanternT);
+        float lanternT = EvaluateNightAmount(progress);
 
         if (lanternLights != null)
         {
@@ -246,22 +390,58 @@ public class EchoDayNightSessionManager3D : NetworkBehaviour
         }
     }
 
+    private float EvaluateNightAmount(float progress)
+    {
+        if (progress < lanternFadeInStart)
+        {
+            return 0f;
+        }
+
+        if (progress < lanternFullAt)
+        {
+            float t = Mathf.InverseLerp(lanternFadeInStart, lanternFullAt, progress);
+            return Smooth(t);
+        }
+
+        if (progress < lanternFadeOutStart)
+        {
+            return 1f;
+        }
+
+        {
+            float t = Mathf.InverseLerp(lanternFadeOutStart, 1f, progress);
+            return 1f - Smooth(t);
+        }
+    }
+
     private void UpdatePhaseText(float progress)
     {
-        if (sessionPhaseText == null)
+        if (cyclePhaseText == null)
             return;
 
-        if (progress < 0.60f)
+        if (progress < 0.18f)
         {
-            sessionPhaseText.text = "Daylight";
+            cyclePhaseText.text = "Sunrise";
         }
-        else if (progress < 0.90f)
+        else if (progress < 0.55f)
         {
-            sessionPhaseText.text = "Evening";
+            cyclePhaseText.text = "Daylight";
+        }
+        else if (progress < 0.68f)
+        {
+            cyclePhaseText.text = "Sunset";
+        }
+        else if (progress < 0.82f)
+        {
+            cyclePhaseText.text = "Evening";
+        }
+        else if (progress < 0.92f)
+        {
+            cyclePhaseText.text = "Night";
         }
         else
         {
-            sessionPhaseText.text = "Night";
+            cyclePhaseText.text = "Dawn";
         }
     }
 
@@ -289,8 +469,8 @@ public class EchoDayNightSessionManager3D : NetworkBehaviour
 
             lanternBaseIntensities[i] = intensity;
 
-            lanternLights[i].intensity = 0f;
             lanternLights[i].enabled = false;
+            lanternLights[i].intensity = 0f;
         }
 
         if (lanternVisualObjects != null)
@@ -303,5 +483,10 @@ public class EchoDayNightSessionManager3D : NetworkBehaviour
                 }
             }
         }
+    }
+
+    private float Smooth(float value)
+    {
+        return Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(value));
     }
 }

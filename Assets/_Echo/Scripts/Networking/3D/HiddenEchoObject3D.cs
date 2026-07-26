@@ -16,6 +16,9 @@ public class HiddenEchoObject3D : MonoBehaviour
     public GameObject reviveVfxPrefab;
     public Transform reviveVfxSpawnPoint;
 
+    [Header("Discovery Popup")]
+    public bool showFirstDiscoveryPopup = true;
+
     private bool isRevived;
     private Coroutine revealCoroutine;
 
@@ -70,6 +73,7 @@ public class HiddenEchoObject3D : MonoBehaviour
         if (revealCoroutine != null)
         {
             StopCoroutine(revealCoroutine);
+            revealCoroutine = null;
         }
 
         SetVisible(true);
@@ -79,6 +83,8 @@ public class HiddenEchoObject3D : MonoBehaviour
         {
             animalWander.StartWandering();
         }
+
+        ShowDiscoveryPopupIfNeeded();
     }
 
     private IEnumerator RevealRoutine(float duration)
@@ -129,5 +135,16 @@ public class HiddenEchoObject3D : MonoBehaviour
         }
 
         Instantiate(reviveVfxPrefab, spawnPosition, Quaternion.identity);
+    }
+
+    private void ShowDiscoveryPopupIfNeeded()
+    {
+        if (!showFirstDiscoveryPopup)
+            return;
+
+        if (FirstAnimalFoundPopupUI.Instance == null)
+            return;
+
+        FirstAnimalFoundPopupUI.Instance.ShowPopupOnce();
     }
 }
